@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Dashboard de seguimiento de porcentajes de Plan de Trabajo y Capacitación de CGE — Mayo 2026" />
+  <title>CGE Dashboard — Plan de Trabajo y Capacitación 2026</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet" />
+
+  <!-- PapaParse para parsing de CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <!-- Chart.js para gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ============================
+       CABECERA PRINCIPAL
+  ============================= -->
+  <header class="header" role="banner">
+    <div class="header__inner">
+      <div class="header__brand">
+        <span class="header__logo-icon" aria-hidden="true">📊</span>
+        <div>
+          <h1 class="header__title">CGE Dashboard</h1>
+          <p class="header__subtitle">Plan de Trabajo &amp; Capacitación — 2026</p>
+        </div>
+      </div>
+
+      <div class="header__controls">
+        <!-- Indicador de fuente de datos -->
+        <span class="badge badge--data-source" id="badge-data-source">● MOCK DATA</span>
+
+        <!-- Toggle de vista: Mensual / Anual YTD -->
+        <div class="view-toggle" role="group" aria-label="Selector de vista">
+          <button class="view-toggle__btn view-toggle__btn--active" id="btn-vista-mensual" data-vista="mensual">
+            Vista Mensual
+          </button>
+          <button class="view-toggle__btn" id="btn-vista-anual" data-vista="anual">
+            Vista Anual YTD
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================
+       BARRA DE FILTROS GLOBALES
+  ============================= -->
+  <section class="filtros" aria-label="Filtros globales">
+    <div class="filtros__inner">
+      <!-- Selector de mes (solo visible en vista mensual) -->
+      <div class="filtro-grupo" id="grupo-mes">
+        <label class="filtro-grupo__label" for="select-mes">Mes</label>
+        <select class="filtro-grupo__select" id="select-mes">
+          <option value="">Cargando meses...</option>
+        </select>
+      </div>
+
+      <!-- Selector de consultor -->
+      <div class="filtro-grupo">
+        <label class="filtro-grupo__label" for="select-consultor">Consultor</label>
+        <select class="filtro-grupo__select" id="select-consultor">
+          <option value="">Todos</option>
+        </select>
+      </div>
+
+      <!-- Selector de estado de reporte -->
+      <div class="filtro-grupo">
+        <label class="filtro-grupo__label" for="select-estado">Estado Reporte</label>
+        <select class="filtro-grupo__select" id="select-estado">
+          <option value="con_datos">Reportados (Con Datos)</option>
+          <option value="sin_datos">Faltantes (Sin Datos)</option>
+          <option value="todos">Todos</option>
+        </select>
+      </div>
+
+      <!-- Búsqueda de entidad -->
+      <div class="filtro-grupo filtro-grupo--search">
+        <label class="filtro-grupo__label" for="input-busqueda">Buscar entidad</label>
+        <input
+          class="filtro-grupo__input"
+          type="search"
+          id="input-busqueda"
+          placeholder="Nombre de entidad..."
+          aria-label="Buscar entidad por nombre"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================
+       SECCIÓN PRINCIPAL
+  ============================= -->
+  <main class="main" id="main-content">
+
+    <!-- Estado de carga -->
+    <div class="loading-state" id="loading-state" aria-live="polite" aria-busy="true">
+      <div class="loading-state__spinner" aria-hidden="true"></div>
+      <p class="loading-state__text">Cargando datos...</p>
+    </div>
+
+    <!-- Contenido principal (oculto hasta que carguen los datos) -->
+    <div class="content" id="content" hidden>
+
+      <!-- ---- KPI Cards ---- -->
+      <section class="kpi-section" aria-label="Indicadores clave">
+        <div class="kpi-grid">
+
+          <article class="kpi-card" id="kpi-entidades">
+            <p class="kpi-card__label">Entidades (Filtradas)</p>
+            <p class="kpi-card__value" id="kpi-val-entidades">—</p>
+            <p class="kpi-card__sub" id="kpi-sub-entidades">del total</p>
+          </article>
+
+          <article class="kpi-card" id="kpi-consultores">
+            <p class="kpi-card__label">Consultores Activos</p>
+            <p class="kpi-card__value" id="kpi-val-consultores">—</p>
+            <p class="kpi-card__sub">con entidades en el período</p>
+          </article>
+
+          <article class="kpi-card kpi-card--acento" id="kpi-plan">
+            <p class="kpi-card__label">% Prom. Plan de Trabajo</p>
+            <p class="kpi-card__value" id="kpi-val-plan">—</p>
+            <p class="kpi-card__sub">promedio entidades activas</p>
+          </article>
+
+          <article class="kpi-card kpi-card--acento2" id="kpi-capacitacion">
+            <p class="kpi-card__label">% Prom. Capacitación</p>
+            <p class="kpi-card__value" id="kpi-val-capacitacion">—</p>
+            <p class="kpi-card__sub">promedio entidades activas</p>
+          </article>
+
+          <article class="kpi-card kpi-card--alerta" id="kpi-huerfanas">
+            <p class="kpi-card__label">Cuentas Huérfanas</p>
+            <p class="kpi-card__value" id="kpi-val-huerfanas">—</p>
+            <p class="kpi-card__sub">SIN CONSULTOR + GESTOR</p>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- ---- Vista Mensual ---- -->
+      <div id="vista-mensual">
+
+        <!-- Gráfico: Rendimiento por Consultor -->
+        <section class="chart-section" aria-label="Rendimiento general">
+          <div class="card">
+            <h2 class="card__title">Salud del Portafolio por Consultor</h2>
+            <p class="card__subtitle" id="chart-consultor-subtitle" style="line-height: 1.4;">
+              <strong>Distribución de Riesgos:</strong> Muestra cuántas empresas tiene cada consultor en Riesgo Alto (Rojo), Medio (Naranja) o Buen Estado (Verde).
+            </p>
+            <div class="chart-wrapper">
+              <canvas id="chart-consultores" aria-label="Gráfico de barras de rendimiento"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- Gráfico: Workload Mensual -->
+        <section class="chart-section" aria-label="Carga de trabajo operativa del mes">
+          <div class="card">
+            <h2 class="card__title">Workload del Mes</h2>
+            <p class="card__subtitle" style="line-height: 1.4;">
+              <strong>Carga operativa del mes actual:</strong> Compara la cantidad de entidades activas en el mes vs su esfuerzo ponderado.<br>
+              <em>(Se actualiza dinámicamente si filtras por Estado de Reporte).</em>
+            </p>
+            <div class="chart-wrapper">
+              <canvas id="chart-workload-mensual" aria-label="Gráfico de carga de trabajo mensual"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- Acordeón de Consultores -->
+        <section class="acordeon-section" aria-label="Detalle por consultor">
+          <div class="card">
+            <h2 class="card__title">Detalle por Consultor</h2>
+            <div class="acordeon" id="acordeon-consultores">
+              <!-- Generado dinámicamente por app.js -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Tabla de Riesgos -->
+        <section class="tabla-section" aria-label="Alertas de riesgo">
+          <div class="card">
+            <h2 class="card__title">🔴 Top 10 Alertas de Riesgo</h2>
+            <p class="card__subtitle">Entidades con mayor brecha o menor rendimiento</p>
+            <div class="table-wrapper" role="region" aria-label="Tabla de riesgos" tabindex="0">
+              <table class="tabla tabla--riesgo" id="tabla-riesgos">
+                <thead>
+                  <tr>
+                    <th scope="col">Entidad</th>
+                    <th scope="col">Consultor</th>
+                    <th scope="col">% Plan</th>
+                    <th scope="col">% Capac.</th>
+                    <th scope="col">Gap</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Observaciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-riesgos">
+                  <!-- Generado por app.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </div><!-- /vista-mensual -->
+
+      <!-- ---- Vista Anual YTD ---- -->
+      <div id="vista-anual" hidden>
+
+        <!-- Gráfico: Tendencia YTD -->
+        <section class="chart-section" aria-label="Tendencia anual acumulada">
+          <div class="card">
+            <h2 class="card__title">Tendencia YTD — Plan vs Capacitación</h2>
+            <p class="card__subtitle">Evolución mes a mes (solo meses con datos reales)</p>
+            <div class="chart-wrapper">
+              <canvas id="chart-ytd" aria-label="Gráfico de líneas de tendencia anual"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- Gráfico: Distribución de Frecuencia -->
+        <div class="charts-row">
+          <section class="chart-section chart-section--half" aria-label="Distribución de frecuencia">
+            <div class="card">
+              <h2 class="card__title">Distribución por Frecuencia</h2>
+              <div class="chart-wrapper chart-wrapper--donut">
+                <canvas id="chart-frecuencia" aria-label="Gráfico donut de frecuencias"></canvas>
+              </div>
+            </div>
+          </section>
+
+          <!-- Gráfico: Workload -->
+          <section class="chart-section chart-section--half" aria-label="Carga de trabajo por consultor">
+            <div class="card">
+              <h2 class="card__title">Workload por Consultor</h2>
+              <p class="card__subtitle" style="line-height: 1.4;">
+                <strong>Entidades brutas vs Puntuación ponderada:</strong> Mide el esfuerzo real.<br>
+                (Mensual = x1.0 | Bimestral = x0.5 | Trimestral = x0.33).<br>
+                <em>A mayor barra verde, mayor carga operativa tiene el consultor.</em>
+              </p>
+              <div class="chart-wrapper">
+                <canvas id="chart-workload" aria-label="Gráfico de carga de trabajo"></canvas>
+              </div>
+            </div>
+          </section>
+        </div>
+
+      </div><!-- /vista-anual -->
+
+      <!-- ---- Tabla Maestra ---- -->
+      <section class="tabla-section" aria-label="Tabla maestra de entidades">
+        <div class="card">
+          <h2 class="card__title">Tabla Maestra de Entidades</h2>
+          <p class="card__subtitle" id="tabla-maestra-info">Cargando...</p>
+          <div class="table-wrapper" role="region" aria-label="Tabla maestra" tabindex="0">
+            <table class="tabla" id="tabla-maestra">
+              <thead>
+                <tr>
+                  <th scope="col" data-col="entidad" class="sortable">Entidad <span class="sort-icon">⇅</span></th>
+                  <th scope="col" data-col="frecuencia" class="sortable">Frecuencia <span class="sort-icon">⇅</span></th>
+                  <th scope="col" data-col="consultor" class="sortable">Consultor <span class="sort-icon">⇅</span></th>
+                  <th scope="col" data-col="plan" class="sortable">% Plan <span class="sort-icon">⇅</span></th>
+                  <th scope="col" data-col="capacitacion" class="sortable">% Capac. <span class="sort-icon">⇅</span></th>
+                  <th scope="col" data-col="gap" class="sortable">Gap <span class="sort-icon">⇅</span></th>
+                  <th scope="col">Observaciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-maestra">
+                <!-- Generado por app.js -->
+              </tbody>
+            </table>
+          </div>
+          <!-- Paginación -->
+          <div class="paginacion" id="paginacion" aria-label="Paginación de tabla maestra"></div>
+        </div>
+      </section>
+
+    </div><!-- /content -->
+  </main>
+
+  <!-- ============================
+       PIE DE PÁGINA
+  ============================= -->
+  <footer class="footer" role="contentinfo">
+    <p>CGE Dashboard &mdash; Plan de Trabajo y Capacitación 2026 &mdash; Datos al corte de <span id="footer-fecha">Mayo 2026</span></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
