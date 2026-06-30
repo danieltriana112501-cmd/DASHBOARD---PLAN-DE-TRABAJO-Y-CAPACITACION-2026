@@ -27,16 +27,25 @@
   <header class="header" role="banner">
     <div class="header__inner">
       <div class="header__brand">
-        <span class="header__logo-icon" aria-hidden="true">📊</span>
+        <!-- Contenedor blanco para proteger el logo oscuro -->
+        <div class="header__logo-wrapper">
+          <img
+            src="LOGO-VECTOR-01-TRANSPARENTE-1.png"
+            alt="CGE"
+            class="header__logo-img"
+            onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='inline';"
+          />
+          <span id="logo-fallback" class="header__logo-icon" aria-hidden="true" style="display:none;">📊</span>
+        </div>
         <div>
-          <h1 class="header__title">CGE Dashboard</h1>
+          <h1 class="header__title"><span class="accent">CGE</span> Dashboard</h1>
           <p class="header__subtitle">Plan de Trabajo &amp; Capacitación — 2026</p>
         </div>
       </div>
 
       <div class="header__controls">
         <!-- Indicador de fuente de datos -->
-        <span class="badge badge--data-source" id="badge-data-source">● MOCK DATA</span>
+        <span class="badge badge--data-source" id="badge-data-source"><span class="blink-dot">●</span> LIVE DATA</span>
 
         <!-- Toggle de vista: Mensual / Anual YTD -->
         <div class="view-toggle" role="group" aria-label="Selector de vista">
@@ -70,6 +79,12 @@
         <select class="filtro-grupo__select" id="select-consultor">
           <option value="">Todos</option>
         </select>
+      </div>
+
+      <!-- Descargar informe HTML autónomo del consultor seleccionado -->
+      <div class="filtro-grupo filtro-grupo--accion">
+        <label class="filtro-grupo__label">&nbsp;</label>
+        <button type="button" id="btn-descargar-informe" class="btn-informe" title="Descarga un informe HTML del consultor seleccionado en el filtro">⬇ Descargar Informe</button>
       </div>
 
       <!-- Selector de estado de reporte -->
